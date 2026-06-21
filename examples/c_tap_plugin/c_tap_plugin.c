@@ -80,8 +80,8 @@ static MgResult MG_CALL get_plugin_info(void *plugin_data, MgPluginInfoBuffers *
     result = copy_string("C Tap Example", buffers->name, buffers->name_capacity, buffers->name_required);
     if (result != MG_OK)
         return result;
-    result = copy_string("Adds a tap note at the current tick.", buffers->description,
-                         buffers->description_capacity, buffers->description_required);
+    result = copy_string("Adds a tap note at the current tick.", buffers->description, buffers->description_capacity,
+                         buffers->description_required);
     if (result != MG_OK)
         return result;
     return copy_string("marmkmt examples", buffers->developer, buffers->developer_capacity,
@@ -114,8 +114,8 @@ static void MG_CALL destroy_command(void *plugin_data, void *command)
     free(command);
 }
 
-static MgResult MG_CALL get_command_name(void *plugin_data, void *command, char *buffer,
-                                         uint32_t capacity, uint32_t *required)
+static MgResult MG_CALL get_command_name(void *plugin_data, void *command, char *buffer, uint32_t capacity,
+                                         uint32_t *required)
 {
     (void)plugin_data;
     if (command == NULL)
@@ -218,8 +218,7 @@ cleanup:
     return result;
 }
 
-MgResult MG_CALL mg_plugin_init(uint32_t requested_abi_version, const MgHostApi *host_api,
-                                MgPluginApi *out_plugin_api)
+MgResult MG_CALL mg_plugin_init(uint32_t requested_abi_version, const MgHostApi *host_api, MgPluginApi *out_plugin_api)
 {
     /*
      * marmkmt はプラグイン情報または command が初めて必要になった時に、この関数を
