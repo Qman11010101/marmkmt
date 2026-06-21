@@ -4,8 +4,20 @@
 defined by [`include/marmkmt.h`](include/marmkmt.h). It builds as one x64
 Windows static library; it does not build a bridge DLL.
 
-The bundled SDK header is pinned to commit
-`b8d0c87125e090880a75f6f0ff57a773510299a8`.
+The SDK header is provided by the `third_party/MargretePluginSDK` Git
+submodule, pinned to commit `b8d0c87125e090880a75f6f0ff57a773510299a8`.
+
+Clone with submodules enabled:
+
+```powershell
+git clone --recurse-submodules <repository-url>
+```
+
+For an existing checkout, initialize the SDK with:
+
+```powershell
+git submodule update --init --recursive
+```
 
 ## Build with Visual Studio 2022
 
