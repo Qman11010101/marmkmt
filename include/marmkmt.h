@@ -384,8 +384,7 @@ extern "C"
      * @retval MG_ERR_UNSUPPORTED_ABI 要求された ABI に対応していない。
      * @return その他の MG_ERR_*。初期化失敗として扱われる。
      */
-    MgResult MG_CALL mg_plugin_init(uint32_t requested_abi_version,
-                                    const MgHostApi *host_api,
+    MgResult MG_CALL mg_plugin_init(uint32_t requested_abi_version, const MgHostApi *host_api,
                                     MgPluginApi *out_plugin_api);
 
 #ifdef __cplusplus

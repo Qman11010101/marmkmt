@@ -54,8 +54,7 @@ namespace
     std::unordered_map<uintptr_t, Handle> g_handles;
     std::atomic<uintptr_t> g_next_handle{0x10000};
 
-    template <class F>
-    MgResult guarded(F &&f) noexcept
+    template <class F> MgResult guarded(F &&f) noexcept
     {
         try
         {
@@ -67,10 +66,12 @@ namespace
         }
     }
 
-    uintptr_t token_value(const void *p) { return reinterpret_cast<uintptr_t>(p); }
+    uintptr_t token_value(const void *p)
+    {
+        return reinterpret_cast<uintptr_t>(p);
+    }
 
-    void *make_handle(Invocation &inv, Kind kind, void *sdk, bool owned,
-                      MgEventKind event_kind = 0) noexcept
+    void *make_handle(Invocation &inv, Kind kind, void *sdk, bool owned, MgEventKind event_kind = 0) noexcept
     {
         if (!sdk)
             return nullptr;
@@ -115,16 +116,14 @@ namespace
         }
     }
 
-    MgResult get_handle(const void *token, Kind expected, Handle &out,
-                        bool allow_deleted = false)
+    MgResult get_handle(const void *token, Kind expected, Handle &out, bool allow_deleted = false)
     {
         if (!token)
             return MG_ERR_NULL_POINTER;
         std::lock_guard<std::mutex> lock(g_handles_mutex);
         const auto it = g_handles.find(token_value(token));
-        if (it == g_handles.end() || it->second.kind != expected ||
-            !it->second.invocation || !it->second.invocation->active ||
-            (it->second.deleted && !allow_deleted) || it->second.refs == 0)
+        if (it == g_handles.end() || it->second.kind != expected || !it->second.invocation ||
+            !it->second.invocation->active || (it->second.deleted && !allow_deleted) || it->second.refs == 0)
         {
             return MG_ERR_INVALID_HANDLE;
         }
@@ -140,9 +139,8 @@ namespace
             return MG_ERR_NULL_POINTER;
         std::lock_guard<std::mutex> lock(g_handles_mutex);
         const auto it = g_handles.find(token_value(token));
-        if (it == g_handles.end() || !it->second.invocation ||
-            !it->second.invocation->active || (it->second.deleted && !allow_deleted) ||
-            it->second.refs == 0)
+        if (it == g_handles.end() || !it->second.invocation || !it->second.invocation->active ||
+            (it->second.deleted && !allow_deleted) || it->second.refs == 0)
             return MG_ERR_INVALID_HANDLE;
         if (it->second.thread != std::this_thread::get_id())
             return MG_ERR_WRONG_THREAD;
@@ -229,14 +227,14 @@ namespace
 
     MP_NOTEINFO to_sdk(const MgNoteInfo &i)
     {
-        return {i.type, i.long_attr, i.direction, i.ex_attr, i.variation_id, i.x,
-                i.width, i.height, i.tick, i.timeline_id, i.option_value};
+        return {i.type,  i.long_attr, i.direction, i.ex_attr,     i.variation_id, i.x,
+                i.width, i.height,    i.tick,      i.timeline_id, i.option_value};
     }
 
     MgNoteInfo from_sdk(const MP_NOTEINFO &i)
     {
-        return {i.type, i.longAttr, i.direction, i.exAttr, i.variationId, i.x,
-                i.width, i.height, i.tick, i.timelineId, i.optionValue};
+        return {i.type,  i.longAttr, i.direction, i.exAttr,     i.variationId, i.x,
+                i.width, i.height,   i.tick,      i.timelineId, i.optionValue};
     }
 
     void show_dialog(HWND owner, const wchar_t *message) noexcept
@@ -260,13 +258,13 @@ namespace
             return false;
         if (length == 0)
             return true;
-        const int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes,
-                                              static_cast<int>(length), nullptr, 0);
+        const int count =
+            MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(length), nullptr, 0);
         if (count <= 0)
             return false;
         out.resize(static_cast<size_t>(count));
-        return MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes,
-                                   static_cast<int>(length), out.data(), count) == count;
+        return MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(length), out.data(), count) ==
+               count;
     }
 
     MgResult validate_utf8_message(const char *message, uint32_t length, std::wstring &out)
@@ -283,8 +281,7 @@ namespace
         if (!buffer || capacity <= 0)
             return;
         size_t n = (std::min)(value.size(), static_cast<size_t>(capacity - 1));
-        if (n && n < value.size() && n < value.size() &&
-            value[n - 1] >= 0xD800 && value[n - 1] <= 0xDBFF)
+        if (n && n < value.size() && n < value.size() && value[n - 1] >= 0xD800 && value[n - 1] <= 0xDBFF)
             --n;
         if (n)
             std::memcpy(buffer, value.data(), n * sizeof(wchar_t));
@@ -293,51 +290,65 @@ namespace
 
     MgResult MG_CALL object_add_ref(void *object)
     {
-        return guarded([&]
-                       {
-        Handle h{}; MgResult r = get_any_handle(object, h);
-        if (r != MG_OK) return r;
-        if (!h.owned) return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
-        base(h.sdk)->addRef();
-        std::lock_guard<std::mutex> lock(g_handles_mutex);
-        auto it = g_handles.find(token_value(object));
-        if (it == g_handles.end()) { base(h.sdk)->release(); return static_cast<MgResult>(MG_ERR_INVALID_HANDLE); }
-        ++it->second.refs;
-        return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_any_handle(object, h);
+            if (r != MG_OK)
+                return r;
+            if (!h.owned)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            base(h.sdk)->addRef();
+            std::lock_guard<std::mutex> lock(g_handles_mutex);
+            auto it = g_handles.find(token_value(object));
+            if (it == g_handles.end())
+            {
+                base(h.sdk)->release();
+                return static_cast<MgResult>(MG_ERR_INVALID_HANDLE);
+            }
+            ++it->second.refs;
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     MgResult MG_CALL object_release(void *object)
     {
-        return guarded([&]
-                       {
-        Handle h{}; MgResult r = get_any_handle(object, h, true);
-        if (r != MG_OK) return r;
-        if (!h.owned) return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
-        if (h.kind == Kind::undo && h.refs == 1 &&
-            static_cast<IMargretePluginUndoBuffer*>(h.sdk)->isRecording()) {
-            return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
-        }
-        {
-            std::lock_guard<std::mutex> lock(g_handles_mutex);
-            auto it = g_handles.find(token_value(object));
-            if (it == g_handles.end() || it->second.refs <= 0) return static_cast<MgResult>(MG_ERR_INVALID_HANDLE);
-            --it->second.refs;
-        }
-        base(h.sdk)->release();
-        return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_any_handle(object, h, true);
+            if (r != MG_OK)
+                return r;
+            if (!h.owned)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            if (h.kind == Kind::undo && h.refs == 1 && static_cast<IMargretePluginUndoBuffer *>(h.sdk)->isRecording())
+            {
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            }
+            {
+                std::lock_guard<std::mutex> lock(g_handles_mutex);
+                auto it = g_handles.find(token_value(object));
+                if (it == g_handles.end() || it->second.refs <= 0)
+                    return static_cast<MgResult>(MG_ERR_INVALID_HANDLE);
+                --it->second.refs;
+            }
+            base(h.sdk)->release();
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     MgResult MG_CALL report_error(MgContext *context, const char *message, uint32_t length)
     {
-        return guarded([&]
-                       {
-        Handle h{}; MgResult r = get_handle(context, Kind::context, h);
-        if (r != MG_OK) return r;
-        std::wstring wide;
-        r = validate_utf8_message(message, length, wide);
-        if (r != MG_OK) return r;
-        show_dialog(h.invocation->owner, wide.c_str());
-        return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(context, Kind::context, h);
+            if (r != MG_OK)
+                return r;
+            std::wstring wide;
+            r = validate_utf8_message(message, length, wide);
+            if (r != MG_OK)
+                return r;
+            show_dialog(h.invocation->owner, wide.c_str());
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     template <class T>
@@ -349,13 +360,17 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       {
-        Handle h{}; MgResult r = get_handle(context, Kind::context, h); if (r != MG_OK) return r;
-        IMargretePluginDocument* p{};
-        if (!static_cast<IMargretePluginContext*>(h.sdk)->getDocument(&p) || !p) return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
-        *out = static_cast<MgDocument*>(make_handle(*h.invocation, Kind::document, p, true));
-        return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(context, Kind::context, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginDocument *p{};
+            if (!static_cast<IMargretePluginContext *>(h.sdk)->getDocument(&p) || !p)
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            *out = static_cast<MgDocument *>(make_handle(*h.invocation, Kind::document, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
 
     MgResult MG_CALL context_get_main_window_handle(MgContext *context, MgNativeWindowHandle *out)
@@ -363,22 +378,40 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(context,Kind::context,h); if(r!=MG_OK)return r;
-        *out=static_cast<IMargretePluginContext*>(h.sdk)->getMainWindowHandle(); h.invocation->owner=static_cast<HWND>(*out); return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(context, Kind::context, h);
+            if (r != MG_OK)
+                return r;
+            *out = static_cast<IMargretePluginContext *>(h.sdk)->getMainWindowHandle();
+            h.invocation->owner = static_cast<HWND>(*out);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL context_get_current_tick(MgContext *context, MgInt *out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = 0;
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(context,Kind::context,h); if(r!=MG_OK)return r; *out=static_cast<IMargretePluginContext*>(h.sdk)->getCurrentTick(); return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(context, Kind::context, h);
+            if (r != MG_OK)
+                return r;
+            *out = static_cast<IMargretePluginContext *>(h.sdk)->getCurrentTick();
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL context_update(MgContext *context)
     {
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(context,Kind::context,h); if(r!=MG_OK)return r; static_cast<IMargretePluginContext*>(h.sdk)->update(); return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(context, Kind::context, h);
+            if (r != MG_OK)
+                return r;
+            static_cast<IMargretePluginContext *>(h.sdk)->update();
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     MgResult MG_CALL document_get_chart(MgDocument *doc, MgChart **out)
@@ -386,29 +419,68 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(doc,Kind::document,h); if(r!=MG_OK)return r; IMargretePluginChart* p{}; if(!static_cast<IMargretePluginDocument*>(h.sdk)->getChart(&p)||!p)return static_cast<MgResult>(MG_ERR_SDK_FAILURE); *out=static_cast<MgChart*>(make_handle(*h.invocation,Kind::chart,p,true)); return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(doc, Kind::document, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginChart *p{};
+            if (!static_cast<IMargretePluginDocument *>(h.sdk)->getChart(&p) || !p)
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            *out = static_cast<MgChart *>(make_handle(*h.invocation, Kind::chart, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
     MgResult MG_CALL document_get_undo_buffer(MgDocument *doc, MgUndoBuffer **out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(doc,Kind::document,h); if(r!=MG_OK)return r; IMargretePluginUndoBuffer* p{}; if(!static_cast<IMargretePluginDocument*>(h.sdk)->getUndoBuffer(&p)||!p)return static_cast<MgResult>(MG_ERR_SDK_FAILURE); *out=static_cast<MgUndoBuffer*>(make_handle(*h.invocation,Kind::undo,p,true)); return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(doc, Kind::document, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginUndoBuffer *p{};
+            if (!static_cast<IMargretePluginDocument *>(h.sdk)->getUndoBuffer(&p) || !p)
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            *out = static_cast<MgUndoBuffer *>(make_handle(*h.invocation, Kind::undo, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
 
-    template <MpBoolean (IMargretePluginUndoBuffer::*Method)()>
-    MgResult undo_action(MgUndoBuffer *undo)
+    template <MpBoolean (IMargretePluginUndoBuffer::*Method)()> MgResult undo_action(MgUndoBuffer *undo)
     {
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(undo,Kind::undo,h); if(r!=MG_OK)return r; return (static_cast<IMargretePluginUndoBuffer*>(h.sdk)->*Method)()?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_SDK_FAILURE); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(undo, Kind::undo, h);
+            if (r != MG_OK)
+                return r;
+            return (static_cast<IMargretePluginUndoBuffer *>(h.sdk)->*Method)()
+                       ? static_cast<MgResult>(MG_OK)
+                       : static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+        });
     }
-    MgResult MG_CALL undo_begin_recording(MgUndoBuffer *p) { return undo_action<&IMargretePluginUndoBuffer::beginRecording>(p); }
-    MgResult MG_CALL undo_commit_recording(MgUndoBuffer *p) { return undo_action<&IMargretePluginUndoBuffer::commitRecording>(p); }
-    MgResult MG_CALL undo_discard_recording(MgUndoBuffer *p) { return undo_action<&IMargretePluginUndoBuffer::discardRecording>(p); }
-    MgResult MG_CALL undo_undo(MgUndoBuffer *p) { return undo_action<&IMargretePluginUndoBuffer::undo>(p); }
-    MgResult MG_CALL undo_redo(MgUndoBuffer *p) { return undo_action<&IMargretePluginUndoBuffer::redo>(p); }
+    MgResult MG_CALL undo_begin_recording(MgUndoBuffer *p)
+    {
+        return undo_action<&IMargretePluginUndoBuffer::beginRecording>(p);
+    }
+    MgResult MG_CALL undo_commit_recording(MgUndoBuffer *p)
+    {
+        return undo_action<&IMargretePluginUndoBuffer::commitRecording>(p);
+    }
+    MgResult MG_CALL undo_discard_recording(MgUndoBuffer *p)
+    {
+        return undo_action<&IMargretePluginUndoBuffer::discardRecording>(p);
+    }
+    MgResult MG_CALL undo_undo(MgUndoBuffer *p)
+    {
+        return undo_action<&IMargretePluginUndoBuffer::undo>(p);
+    }
+    MgResult MG_CALL undo_redo(MgUndoBuffer *p)
+    {
+        return undo_action<&IMargretePluginUndoBuffer::redo>(p);
+    }
 
     template <MpBoolean (IMargretePluginUndoBuffer::*Method)() const>
     MgResult undo_query(MgUndoBuffer *undo, MgBool *out)
@@ -416,28 +488,58 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = MG_FALSE;
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(undo,Kind::undo,h); if(r!=MG_OK)return r; *out=(static_cast<IMargretePluginUndoBuffer*>(h.sdk)->*Method)()?MG_TRUE:MG_FALSE; return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(undo, Kind::undo, h);
+            if (r != MG_OK)
+                return r;
+            *out = (static_cast<IMargretePluginUndoBuffer *>(h.sdk)->*Method)() ? MG_TRUE : MG_FALSE;
+            return static_cast<MgResult>(MG_OK);
+        });
     }
-    MgResult MG_CALL undo_can_undo(MgUndoBuffer *p, MgBool *out) { return undo_query<&IMargretePluginUndoBuffer::canUndo>(p, out); }
-    MgResult MG_CALL undo_can_redo(MgUndoBuffer *p, MgBool *out) { return undo_query<&IMargretePluginUndoBuffer::canRedo>(p, out); }
-    MgResult MG_CALL undo_is_recording(MgUndoBuffer *p, MgBool *out) { return undo_query<&IMargretePluginUndoBuffer::isRecording>(p, out); }
+    MgResult MG_CALL undo_can_undo(MgUndoBuffer *p, MgBool *out)
+    {
+        return undo_query<&IMargretePluginUndoBuffer::canUndo>(p, out);
+    }
+    MgResult MG_CALL undo_can_redo(MgUndoBuffer *p, MgBool *out)
+    {
+        return undo_query<&IMargretePluginUndoBuffer::canRedo>(p, out);
+    }
+    MgResult MG_CALL undo_is_recording(MgUndoBuffer *p, MgBool *out)
+    {
+        return undo_query<&IMargretePluginUndoBuffer::isRecording>(p, out);
+    }
 
     MgResult MG_CALL chart_create_note(MgChart *chart, MgNote **out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       { Handle h{}; MgResult r=get_handle(chart,Kind::chart,h);if(r!=MG_OK)return r; IMargretePluginNote*p{};if(!static_cast<IMargretePluginChart*>(h.sdk)->createNote(&p)||!p)return static_cast<MgResult>(MG_ERR_SDK_FAILURE);*out=static_cast<MgNote*>(make_handle(*h.invocation,Kind::note,p,true));return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(chart, Kind::chart, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginNote *p{};
+            if (!static_cast<IMargretePluginChart *>(h.sdk)->createNote(&p) || !p)
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            *out = static_cast<MgNote *>(make_handle(*h.invocation, Kind::note, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
     MgResult MG_CALL chart_get_notes_count(MgChart *chart, MgInt *out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = 0;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(chart,Kind::chart,h);if(r!=MG_OK)return r;*out=static_cast<IMargretePluginChart*>(h.sdk)->getNotesCount();return *out<0?static_cast<MgResult>(MG_ERR_SDK_FAILURE):static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(chart, Kind::chart, h);
+            if (r != MG_OK)
+                return r;
+            *out = static_cast<IMargretePluginChart *>(h.sdk)->getNotesCount();
+            return *out < 0 ? static_cast<MgResult>(MG_ERR_SDK_FAILURE) : static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL chart_get_note(MgChart *chart, MgInt index, MgNote **out)
     {
@@ -446,8 +548,17 @@ namespace
         *out = nullptr;
         if (index < 0)
             return MG_ERR_INVALID_ARGUMENT;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(chart,Kind::chart,h);if(r!=MG_OK)return r;IMargretePluginNote*p{};if(!static_cast<IMargretePluginChart*>(h.sdk)->getNote(index,&p)||!p)return static_cast<MgResult>(MG_ERR_NOT_FOUND);*out=static_cast<MgNote*>(make_handle(*h.invocation,Kind::note,p,true));return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(chart, Kind::chart, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginNote *p{};
+            if (!static_cast<IMargretePluginChart *>(h.sdk)->getNote(index, &p) || !p)
+                return static_cast<MgResult>(MG_ERR_NOT_FOUND);
+            *out = static_cast<MgNote *>(make_handle(*h.invocation, Kind::note, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
 
     MgResult pair_handles(void *a, Kind ak, void *b, Kind bk, Handle &ah, Handle &bh)
@@ -462,8 +573,15 @@ namespace
     }
     MgResult MG_CALL chart_append_note(MgChart *c, MgNote *n)
     {
-        return guarded([&]
-                       {Handle ch{},nh{};MgResult r=pair_handles(c,Kind::chart,n,Kind::note,ch,nh);if(r!=MG_OK)return r;return static_cast<IMargretePluginChart*>(ch.sdk)->appendNote(static_cast<IMargretePluginNote*>(nh.sdk))?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_SDK_FAILURE); });
+        return guarded([&] {
+            Handle ch{}, nh{};
+            MgResult r = pair_handles(c, Kind::chart, n, Kind::note, ch, nh);
+            if (r != MG_OK)
+                return r;
+            return static_cast<IMargretePluginChart *>(ch.sdk)->appendNote(static_cast<IMargretePluginNote *>(nh.sdk))
+                       ? static_cast<MgResult>(MG_OK)
+                       : static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+        });
     }
     MgResult mark_deleted(void *token)
     {
@@ -480,13 +598,26 @@ namespace
     }
     MgResult MG_CALL chart_delete_note(MgChart *c, MgNote *n)
     {
-        return guarded([&]
-                       {Handle ch{},nh{};MgResult r=pair_handles(c,Kind::chart,n,Kind::note,ch,nh);if(r!=MG_OK)return r;if(!static_cast<IMargretePluginChart*>(ch.sdk)->deleteNote(static_cast<IMargretePluginNote*>(nh.sdk)))return static_cast<MgResult>(MG_ERR_SDK_FAILURE);return mark_deleted(n); });
+        return guarded([&] {
+            Handle ch{}, nh{};
+            MgResult r = pair_handles(c, Kind::chart, n, Kind::note, ch, nh);
+            if (r != MG_OK)
+                return r;
+            if (!static_cast<IMargretePluginChart *>(ch.sdk)->deleteNote(static_cast<IMargretePluginNote *>(nh.sdk)))
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            return mark_deleted(n);
+        });
     }
     MgResult MG_CALL chart_offset_notes(MgChart *c, MgInt tick)
     {
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(c,Kind::chart,h);if(r!=MG_OK)return r;static_cast<IMargretePluginChart*>(h.sdk)->offsetNotes(tick);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(c, Kind::chart, h);
+            if (r != MG_OK)
+                return r;
+            static_cast<IMargretePluginChart *>(h.sdk)->offsetNotes(tick);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     MgResult MG_CALL note_get_id(MgNote *n, MgInt *out)
@@ -494,16 +625,30 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = 0;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;*out=static_cast<IMargretePluginNote*>(h.sdk)->getId();return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            *out = static_cast<IMargretePluginNote *>(h.sdk)->getId();
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL note_get_info(MgNote *n, MgNoteInfo *out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         std::memset(out, 0, sizeof(*out));
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;MP_NOTEINFO i{};static_cast<IMargretePluginNote*>(h.sdk)->getInfo(&i);*out=from_sdk(i);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            MP_NOTEINFO i{};
+            static_cast<IMargretePluginNote *>(h.sdk)->getInfo(&i);
+            *out = from_sdk(i);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL note_set_info(MgNote *n, const MgNoteInfo *in)
     {
@@ -511,16 +656,29 @@ namespace
             return MG_ERR_NULL_POINTER;
         if (!valid_note_info(*in))
             return MG_ERR_INVALID_ARGUMENT;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;MP_NOTEINFO i=to_sdk(*in);static_cast<IMargretePluginNote*>(h.sdk)->setInfo(&i);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            MP_NOTEINFO i = to_sdk(*in);
+            static_cast<IMargretePluginNote *>(h.sdk)->setInfo(&i);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL note_get_children_count(MgNote *n, MgInt *out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = 0;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;*out=static_cast<IMargretePluginNote*>(h.sdk)->getChildrenCount();return *out<0?static_cast<MgResult>(MG_ERR_SDK_FAILURE):static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            *out = static_cast<IMargretePluginNote *>(h.sdk)->getChildrenCount();
+            return *out < 0 ? static_cast<MgResult>(MG_ERR_SDK_FAILURE) : static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult note_relation(MgNote *n, MgInt index, MgNote **out, int which)
     {
@@ -529,49 +687,117 @@ namespace
         *out = nullptr;
         if (which == 0 && index < 0)
             return MG_ERR_INVALID_ARGUMENT;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;IMargretePluginNote*p{};auto*s=static_cast<IMargretePluginNote*>(h.sdk);MpBoolean ok=which==0?s->getChild(index,&p):(which==1?s->getParent(&p):s->getBaseNote(&p));if(!ok||!p)return static_cast<MgResult>(MG_ERR_NOT_FOUND);*out=static_cast<MgNote*>(make_handle(*h.invocation,Kind::note,p,true));return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginNote *p{};
+            auto *s = static_cast<IMargretePluginNote *>(h.sdk);
+            MpBoolean ok = which == 0 ? s->getChild(index, &p) : (which == 1 ? s->getParent(&p) : s->getBaseNote(&p));
+            if (!ok || !p)
+                return static_cast<MgResult>(MG_ERR_NOT_FOUND);
+            *out = static_cast<MgNote *>(make_handle(*h.invocation, Kind::note, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
-    MgResult MG_CALL note_get_child(MgNote *n, MgInt i, MgNote **o) { return note_relation(n, i, o, 0); }
-    MgResult MG_CALL note_get_parent(MgNote *n, MgNote **o) { return note_relation(n, 0, o, 1); }
-    MgResult MG_CALL note_get_base_note(MgNote *n, MgNote **o) { return note_relation(n, 0, o, 2); }
+    MgResult MG_CALL note_get_child(MgNote *n, MgInt i, MgNote **o)
+    {
+        return note_relation(n, i, o, 0);
+    }
+    MgResult MG_CALL note_get_parent(MgNote *n, MgNote **o)
+    {
+        return note_relation(n, 0, o, 1);
+    }
+    MgResult MG_CALL note_get_base_note(MgNote *n, MgNote **o)
+    {
+        return note_relation(n, 0, o, 2);
+    }
     MgResult MG_CALL note_append_child(MgNote *n, MgNote *c)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(n,Kind::note,c,Kind::note,a,b);if(r!=MG_OK)return r;return static_cast<IMargretePluginNote*>(a.sdk)->appendChild(static_cast<IMargretePluginNote*>(b.sdk))?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_SDK_FAILURE); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(n, Kind::note, c, Kind::note, a, b);
+            if (r != MG_OK)
+                return r;
+            return static_cast<IMargretePluginNote *>(a.sdk)->appendChild(static_cast<IMargretePluginNote *>(b.sdk))
+                       ? static_cast<MgResult>(MG_OK)
+                       : static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+        });
     }
     MgResult MG_CALL note_delete_child(MgNote *n, MgNote *c)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(n,Kind::note,c,Kind::note,a,b);if(r!=MG_OK)return r;if(!static_cast<IMargretePluginNote*>(a.sdk)->deleteChild(static_cast<IMargretePluginNote*>(b.sdk)))return static_cast<MgResult>(MG_ERR_SDK_FAILURE);return mark_deleted(c); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(n, Kind::note, c, Kind::note, a, b);
+            if (r != MG_OK)
+                return r;
+            if (!static_cast<IMargretePluginNote *>(a.sdk)->deleteChild(static_cast<IMargretePluginNote *>(b.sdk)))
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            return mark_deleted(c);
+        });
     }
     MgResult MG_CALL note_clone(MgNote *n, MgNote **out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;IMargretePluginNote*p{};if(!static_cast<IMargretePluginNote*>(h.sdk)->clone(&p)||!p)return static_cast<MgResult>(MG_ERR_SDK_FAILURE);*out=static_cast<MgNote*>(make_handle(*h.invocation,Kind::note,p,true));return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            IMargretePluginNote *p{};
+            if (!static_cast<IMargretePluginNote *>(h.sdk)->clone(&p) || !p)
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            *out = static_cast<MgNote *>(make_handle(*h.invocation, Kind::note, p, true));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
     MgResult MG_CALL note_replace_with(MgNote *n, const MgNote *s, MgBool sort)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(n,Kind::note,const_cast<MgNote*>(s),Kind::note,a,b);if(r!=MG_OK)return r;static_cast<IMargretePluginNote*>(a.sdk)->replaceWith(static_cast<IMargretePluginNote*>(b.sdk),sort?MP_TRUE:MP_FALSE);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(n, Kind::note, const_cast<MgNote *>(s), Kind::note, a, b);
+            if (r != MG_OK)
+                return r;
+            static_cast<IMargretePluginNote *>(a.sdk)->replaceWith(static_cast<IMargretePluginNote *>(b.sdk),
+                                                                   sort ? MP_TRUE : MP_FALSE);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL note_copy_info_to(MgNote *n, MgNote *d)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(n,Kind::note,d,Kind::note,a,b);if(r!=MG_OK)return r;static_cast<IMargretePluginNote*>(a.sdk)->copyInfoTo(static_cast<IMargretePluginNote*>(b.sdk));return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(n, Kind::note, d, Kind::note, a, b);
+            if (r != MG_OK)
+                return r;
+            static_cast<IMargretePluginNote *>(a.sdk)->copyInfoTo(static_cast<IMargretePluginNote *>(b.sdk));
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL note_offset_child(MgNote *n, MgInt tick)
     {
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;static_cast<IMargretePluginNote*>(h.sdk)->offsetChild(tick);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            static_cast<IMargretePluginNote *>(h.sdk)->offsetChild(tick);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     MgResult MG_CALL note_flip_h(MgNote *n, MgBool recursive)
     {
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(n,Kind::note,h);if(r!=MG_OK)return r;static_cast<IMargretePluginNote*>(h.sdk)->flipH(recursive?MP_TRUE:MP_FALSE);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(n, Kind::note, h);
+            if (r != MG_OK)
+                return r;
+            static_cast<IMargretePluginNote *>(h.sdk)->flipH(recursive ? MP_TRUE : MP_FALSE);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     MgResult MG_CALL chart_create_event(MgChart *c, MgEventKind kind, MgEvent **out)
@@ -581,8 +807,17 @@ namespace
         *out = nullptr;
         if (!valid_event_kind(kind))
             return MG_ERR_INVALID_ARGUMENT;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(c,Kind::chart,h);if(r!=MG_OK)return r;void*p{};if(!static_cast<IMargretePluginChart*>(h.sdk)->createEvent(*event_iid(kind),&p)||!p)return static_cast<MgResult>(MG_ERR_SDK_FAILURE);*out=static_cast<MgEvent*>(make_handle(*h.invocation,Kind::event,p,true,kind));return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(c, Kind::chart, h);
+            if (r != MG_OK)
+                return r;
+            void *p{};
+            if (!static_cast<IMargretePluginChart *>(h.sdk)->createEvent(*event_iid(kind), &p) || !p)
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            *out = static_cast<MgEvent *>(make_handle(*h.invocation, Kind::event, p, true, kind));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
     IMargretePluginEvent *event_base(const Handle &h)
     {
@@ -600,26 +835,78 @@ namespace
     }
     MgResult MG_CALL chart_append_event(MgChart *c, MgEvent *e)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(c,Kind::chart,e,Kind::event,a,b);if(r!=MG_OK)return r;return static_cast<IMargretePluginChart*>(a.sdk)->appendEvent(event_base(b))?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_SDK_FAILURE); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(c, Kind::chart, e, Kind::event, a, b);
+            if (r != MG_OK)
+                return r;
+            return static_cast<IMargretePluginChart *>(a.sdk)->appendEvent(event_base(b))
+                       ? static_cast<MgResult>(MG_OK)
+                       : static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+        });
     }
     MgResult MG_CALL chart_delete_event(MgChart *c, MgEvent *e)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(c,Kind::chart,e,Kind::event,a,b);if(r!=MG_OK)return r;if(!static_cast<IMargretePluginChart*>(a.sdk)->deleteEvent(event_base(b)))return static_cast<MgResult>(MG_ERR_SDK_FAILURE);return mark_deleted(e); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(c, Kind::chart, e, Kind::event, a, b);
+            if (r != MG_OK)
+                return r;
+            if (!static_cast<IMargretePluginChart *>(a.sdk)->deleteEvent(event_base(b)))
+                return static_cast<MgResult>(MG_ERR_SDK_FAILURE);
+            return mark_deleted(e);
+        });
     }
     MgResult find_event(MgChart *c, MgEventKind kind, MgInt a, MgInt b, MgEvent **out)
     {
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = nullptr;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(c,Kind::chart,h);if(r!=MG_OK)return r;void*p{};auto*s=static_cast<IMargretePluginChart*>(h.sdk);MpBoolean ok=MP_FALSE;switch(kind){case MG_EVENT_KIND_TIMELINE_SPEED:ok=s->findEventTimelineSpeed(a,b,&p);break;case MG_EVENT_KIND_NOTE_SPEED_MODIFIER:ok=s->findEventNoteSpeedModifier(a,&p);break;case MG_EVENT_KIND_BPM:ok=s->findEventBpm(a,&p);break;default:ok=s->findEventBeatChange(a,&p);break;}if(!ok||!p)return static_cast<MgResult>(MG_ERR_NOT_FOUND);*out=static_cast<MgEvent*>(make_handle(*h.invocation,Kind::event,p,true,kind));return *out?static_cast<MgResult>(MG_OK):static_cast<MgResult>(MG_ERR_INTERNAL); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(c, Kind::chart, h);
+            if (r != MG_OK)
+                return r;
+            void *p{};
+            auto *s = static_cast<IMargretePluginChart *>(h.sdk);
+            MpBoolean ok = MP_FALSE;
+            switch (kind)
+            {
+            case MG_EVENT_KIND_TIMELINE_SPEED:
+                ok = s->findEventTimelineSpeed(a, b, &p);
+                break;
+            case MG_EVENT_KIND_NOTE_SPEED_MODIFIER:
+                ok = s->findEventNoteSpeedModifier(a, &p);
+                break;
+            case MG_EVENT_KIND_BPM:
+                ok = s->findEventBpm(a, &p);
+                break;
+            default:
+                ok = s->findEventBeatChange(a, &p);
+                break;
+            }
+            if (!ok || !p)
+                return static_cast<MgResult>(MG_ERR_NOT_FOUND);
+            *out = static_cast<MgEvent *>(make_handle(*h.invocation, Kind::event, p, true, kind));
+            return *out ? static_cast<MgResult>(MG_OK) : static_cast<MgResult>(MG_ERR_INTERNAL);
+        });
     }
-    MgResult MG_CALL chart_find_event_timeline_speed(MgChart *c, MgInt t, MgInt id, MgEvent **o) { return find_event(c, MG_EVENT_KIND_TIMELINE_SPEED, t, id, o); }
-    MgResult MG_CALL chart_find_event_note_speed_modifier(MgChart *c, MgInt t, MgEvent **o) { return find_event(c, MG_EVENT_KIND_NOTE_SPEED_MODIFIER, t, 0, o); }
-    MgResult MG_CALL chart_find_event_bpm(MgChart *c, MgInt t, MgEvent **o) { return find_event(c, MG_EVENT_KIND_BPM, t, 0, o); }
-    MgResult MG_CALL chart_find_event_beat_change(MgChart *c, MgInt b, MgEvent **o) { return find_event(c, MG_EVENT_KIND_BEAT_CHANGE, b, 0, o); }
+    MgResult MG_CALL chart_find_event_timeline_speed(MgChart *c, MgInt t, MgInt id, MgEvent **o)
+    {
+        return find_event(c, MG_EVENT_KIND_TIMELINE_SPEED, t, id, o);
+    }
+    MgResult MG_CALL chart_find_event_note_speed_modifier(MgChart *c, MgInt t, MgEvent **o)
+    {
+        return find_event(c, MG_EVENT_KIND_NOTE_SPEED_MODIFIER, t, 0, o);
+    }
+    MgResult MG_CALL chart_find_event_bpm(MgChart *c, MgInt t, MgEvent **o)
+    {
+        return find_event(c, MG_EVENT_KIND_BPM, t, 0, o);
+    }
+    MgResult MG_CALL chart_find_event_beat_change(MgChart *c, MgInt b, MgEvent **o)
+    {
+        return find_event(c, MG_EVENT_KIND_BEAT_CHANGE, b, 0, o);
+    }
     MgResult MG_CALL event_get_kind(MgEvent *e, MgEventKind *out)
     {
         if (!out)
@@ -636,8 +923,14 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         *out = 0;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(e,Kind::event,h);if(r!=MG_OK)return r;*out=event_base(h)->getId();return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(e, Kind::event, h);
+            if (r != MG_OK)
+                return r;
+            *out = event_base(h)->getId();
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     template <class Public, class Sdk, class Interface, void (Interface::*Get)(Sdk *) const>
@@ -646,8 +939,18 @@ namespace
         if (!out)
             return MG_ERR_NULL_POINTER;
         std::memset(out, 0, sizeof(*out));
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(e,Kind::event,h);if(r!=MG_OK)return r;if(h.event_kind!=kind)return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);Sdk i{};(static_cast<Interface*>(h.sdk)->*Get)(&i);std::memcpy(out,&i,sizeof(i));return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(e, Kind::event, h);
+            if (r != MG_OK)
+                return r;
+            if (h.event_kind != kind)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            Sdk i{};
+            (static_cast<Interface *>(h.sdk)->*Get)(&i);
+            std::memcpy(out, &i, sizeof(i));
+            return static_cast<MgResult>(MG_OK);
+        });
     }
     template <class Public, class Sdk, class Interface, void (Interface::*Set)(const Sdk *)>
     MgResult event_info_set(MgEvent *e, MgEventKind kind, const Public *in, bool finite)
@@ -656,55 +959,199 @@ namespace
             return MG_ERR_NULL_POINTER;
         if (finite && !std::isfinite(in->speed))
             return MG_ERR_INVALID_ARGUMENT;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(e,Kind::event,h);if(r!=MG_OK)return r;if(h.event_kind!=kind)return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);Sdk i{};std::memcpy(&i,in,sizeof(i));(static_cast<Interface*>(h.sdk)->*Set)(&i);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(e, Kind::event, h);
+            if (r != MG_OK)
+                return r;
+            if (h.event_kind != kind)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            Sdk i{};
+            std::memcpy(&i, in, sizeof(i));
+            (static_cast<Interface *>(h.sdk)->*Set)(&i);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
-    MgResult MG_CALL event_timeline_speed_get_info(MgEvent *e, MgEventTimelineSpeedInfo *o) { return event_info_get<MgEventTimelineSpeedInfo, MP_EVENT_TLSINFO, IMargretePluginEventTimelineSpeed, &IMargretePluginEventTimelineSpeed::getInfo>(e, MG_EVENT_KIND_TIMELINE_SPEED, o); }
-    MgResult MG_CALL event_timeline_speed_set_info(MgEvent *e, const MgEventTimelineSpeedInfo *i) { return event_info_set<MgEventTimelineSpeedInfo, MP_EVENT_TLSINFO, IMargretePluginEventTimelineSpeed, &IMargretePluginEventTimelineSpeed::setInfo>(e, MG_EVENT_KIND_TIMELINE_SPEED, i, true); }
-    MgResult MG_CALL event_note_speed_modifier_get_info(MgEvent *e, MgEventNoteSpeedModifierInfo *o) { return event_info_get<MgEventNoteSpeedModifierInfo, MP_EVENT_NSMINFO, IMargretePluginEventNoteSpeedModifier, &IMargretePluginEventNoteSpeedModifier::getInfo>(e, MG_EVENT_KIND_NOTE_SPEED_MODIFIER, o); }
-    MgResult MG_CALL event_note_speed_modifier_set_info(MgEvent *e, const MgEventNoteSpeedModifierInfo *i) { return event_info_set<MgEventNoteSpeedModifierInfo, MP_EVENT_NSMINFO, IMargretePluginEventNoteSpeedModifier, &IMargretePluginEventNoteSpeedModifier::setInfo>(e, MG_EVENT_KIND_NOTE_SPEED_MODIFIER, i, true); }
-    MgResult MG_CALL event_bpm_get_info(MgEvent *e, MgEventBpmInfo *o) { return event_info_get<MgEventBpmInfo, MP_EVENT_BPMINFO, IMargretePluginEventBpm, &IMargretePluginEventBpm::getInfo>(e, MG_EVENT_KIND_BPM, o); }
+    MgResult MG_CALL event_timeline_speed_get_info(MgEvent *e, MgEventTimelineSpeedInfo *o)
+    {
+        return event_info_get<MgEventTimelineSpeedInfo, MP_EVENT_TLSINFO, IMargretePluginEventTimelineSpeed,
+                              &IMargretePluginEventTimelineSpeed::getInfo>(e, MG_EVENT_KIND_TIMELINE_SPEED, o);
+    }
+    MgResult MG_CALL event_timeline_speed_set_info(MgEvent *e, const MgEventTimelineSpeedInfo *i)
+    {
+        return event_info_set<MgEventTimelineSpeedInfo, MP_EVENT_TLSINFO, IMargretePluginEventTimelineSpeed,
+                              &IMargretePluginEventTimelineSpeed::setInfo>(e, MG_EVENT_KIND_TIMELINE_SPEED, i, true);
+    }
+    MgResult MG_CALL event_note_speed_modifier_get_info(MgEvent *e, MgEventNoteSpeedModifierInfo *o)
+    {
+        return event_info_get<MgEventNoteSpeedModifierInfo, MP_EVENT_NSMINFO, IMargretePluginEventNoteSpeedModifier,
+                              &IMargretePluginEventNoteSpeedModifier::getInfo>(e, MG_EVENT_KIND_NOTE_SPEED_MODIFIER, o);
+    }
+    MgResult MG_CALL event_note_speed_modifier_set_info(MgEvent *e, const MgEventNoteSpeedModifierInfo *i)
+    {
+        return event_info_set<MgEventNoteSpeedModifierInfo, MP_EVENT_NSMINFO, IMargretePluginEventNoteSpeedModifier,
+                              &IMargretePluginEventNoteSpeedModifier::setInfo>(e, MG_EVENT_KIND_NOTE_SPEED_MODIFIER, i,
+                                                                               true);
+    }
+    MgResult MG_CALL event_bpm_get_info(MgEvent *e, MgEventBpmInfo *o)
+    {
+        return event_info_get<MgEventBpmInfo, MP_EVENT_BPMINFO, IMargretePluginEventBpm,
+                              &IMargretePluginEventBpm::getInfo>(e, MG_EVENT_KIND_BPM, o);
+    }
     MgResult MG_CALL event_bpm_set_info(MgEvent *e, const MgEventBpmInfo *i)
     {
         if (!i)
             return MG_ERR_NULL_POINTER;
         if (!std::isfinite(i->bpm))
             return MG_ERR_INVALID_ARGUMENT;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(e,Kind::event,h);if(r!=MG_OK)return r;if(h.event_kind!=MG_EVENT_KIND_BPM)return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);MP_EVENT_BPMINFO x{i->tick,i->bpm};static_cast<IMargretePluginEventBpm*>(h.sdk)->setInfo(&x);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(e, Kind::event, h);
+            if (r != MG_OK)
+                return r;
+            if (h.event_kind != MG_EVENT_KIND_BPM)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            MP_EVENT_BPMINFO x{i->tick, i->bpm};
+            static_cast<IMargretePluginEventBpm *>(h.sdk)->setInfo(&x);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
-    MgResult MG_CALL event_beat_change_get_info(MgEvent *e, MgEventBeatChangeInfo *o) { return event_info_get<MgEventBeatChangeInfo, MP_EVENT_BCINFO, IMargretePluginEventBeatChange, &IMargretePluginEventBeatChange::getInfo>(e, MG_EVENT_KIND_BEAT_CHANGE, o); }
+    MgResult MG_CALL event_beat_change_get_info(MgEvent *e, MgEventBeatChangeInfo *o)
+    {
+        return event_info_get<MgEventBeatChangeInfo, MP_EVENT_BCINFO, IMargretePluginEventBeatChange,
+                              &IMargretePluginEventBeatChange::getInfo>(e, MG_EVENT_KIND_BEAT_CHANGE, o);
+    }
     MgResult MG_CALL event_beat_change_set_info(MgEvent *e, const MgEventBeatChangeInfo *i)
     {
         if (!i)
             return MG_ERR_NULL_POINTER;
-        return guarded([&]
-                       {Handle h{};MgResult r=get_handle(e,Kind::event,h);if(r!=MG_OK)return r;if(h.event_kind!=MG_EVENT_KIND_BEAT_CHANGE)return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);MP_EVENT_BCINFO x{i->bar,i->beats_per_bar,i->beat_unit};static_cast<IMargretePluginEventBeatChange*>(h.sdk)->setInfo(&x);return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle h{};
+            MgResult r = get_handle(e, Kind::event, h);
+            if (r != MG_OK)
+                return r;
+            if (h.event_kind != MG_EVENT_KIND_BEAT_CHANGE)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            MP_EVENT_BCINFO x{i->bar, i->beats_per_bar, i->beat_unit};
+            static_cast<IMargretePluginEventBeatChange *>(h.sdk)->setInfo(&x);
+            return static_cast<MgResult>(MG_OK);
+        });
     }
 
     MgResult event_copy_replace(MgEvent *d, const MgEvent *s, bool replace)
     {
-        return guarded([&]
-                       {Handle a{},b{};MgResult r=pair_handles(d,Kind::event,const_cast<MgEvent*>(s),Kind::event,a,b);if(r!=MG_OK)return r;if(a.event_kind!=b.event_kind)return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);switch(a.event_kind){case MG_EVENT_KIND_TIMELINE_SPEED:if(replace)static_cast<IMargretePluginEventTimelineSpeed*>(a.sdk)->replaceWith(static_cast<IMargretePluginEventTimelineSpeed*>(b.sdk));else static_cast<IMargretePluginEventTimelineSpeed*>(a.sdk)->copyInfoTo(static_cast<IMargretePluginEventTimelineSpeed*>(b.sdk));break;case MG_EVENT_KIND_NOTE_SPEED_MODIFIER:if(replace)static_cast<IMargretePluginEventNoteSpeedModifier*>(a.sdk)->replaceWith(static_cast<IMargretePluginEventNoteSpeedModifier*>(b.sdk));else static_cast<IMargretePluginEventNoteSpeedModifier*>(a.sdk)->copyInfoTo(static_cast<IMargretePluginEventNoteSpeedModifier*>(b.sdk));break;case MG_EVENT_KIND_BPM:if(replace)static_cast<IMargretePluginEventBpm*>(a.sdk)->replaceWith(static_cast<IMargretePluginEventBpm*>(b.sdk));else static_cast<IMargretePluginEventBpm*>(a.sdk)->copyInfoTo(static_cast<IMargretePluginEventBpm*>(b.sdk));break;default:if(replace)static_cast<IMargretePluginEventBeatChange*>(a.sdk)->replaceWith(static_cast<IMargretePluginEventBeatChange*>(b.sdk));else static_cast<IMargretePluginEventBeatChange*>(a.sdk)->copyInfoTo(static_cast<IMargretePluginEventBeatChange*>(b.sdk));break;}return static_cast<MgResult>(MG_OK); });
+        return guarded([&] {
+            Handle a{}, b{};
+            MgResult r = pair_handles(d, Kind::event, const_cast<MgEvent *>(s), Kind::event, a, b);
+            if (r != MG_OK)
+                return r;
+            if (a.event_kind != b.event_kind)
+                return static_cast<MgResult>(MG_ERR_INVALID_ARGUMENT);
+            switch (a.event_kind)
+            {
+            case MG_EVENT_KIND_TIMELINE_SPEED:
+                if (replace)
+                    static_cast<IMargretePluginEventTimelineSpeed *>(a.sdk)->replaceWith(
+                        static_cast<IMargretePluginEventTimelineSpeed *>(b.sdk));
+                else
+                    static_cast<IMargretePluginEventTimelineSpeed *>(a.sdk)->copyInfoTo(
+                        static_cast<IMargretePluginEventTimelineSpeed *>(b.sdk));
+                break;
+            case MG_EVENT_KIND_NOTE_SPEED_MODIFIER:
+                if (replace)
+                    static_cast<IMargretePluginEventNoteSpeedModifier *>(a.sdk)->replaceWith(
+                        static_cast<IMargretePluginEventNoteSpeedModifier *>(b.sdk));
+                else
+                    static_cast<IMargretePluginEventNoteSpeedModifier *>(a.sdk)->copyInfoTo(
+                        static_cast<IMargretePluginEventNoteSpeedModifier *>(b.sdk));
+                break;
+            case MG_EVENT_KIND_BPM:
+                if (replace)
+                    static_cast<IMargretePluginEventBpm *>(a.sdk)->replaceWith(
+                        static_cast<IMargretePluginEventBpm *>(b.sdk));
+                else
+                    static_cast<IMargretePluginEventBpm *>(a.sdk)->copyInfoTo(
+                        static_cast<IMargretePluginEventBpm *>(b.sdk));
+                break;
+            default:
+                if (replace)
+                    static_cast<IMargretePluginEventBeatChange *>(a.sdk)->replaceWith(
+                        static_cast<IMargretePluginEventBeatChange *>(b.sdk));
+                else
+                    static_cast<IMargretePluginEventBeatChange *>(a.sdk)->copyInfoTo(
+                        static_cast<IMargretePluginEventBeatChange *>(b.sdk));
+                break;
+            }
+            return static_cast<MgResult>(MG_OK);
+        });
     }
-    MgResult MG_CALL event_replace_with(MgEvent *d, const MgEvent *s) { return event_copy_replace(d, s, true); }
-    MgResult MG_CALL event_copy_info_to(MgEvent *s, MgEvent *d) { return event_copy_replace(s, d, false); }
+    MgResult MG_CALL event_replace_with(MgEvent *d, const MgEvent *s)
+    {
+        return event_copy_replace(d, s, true);
+    }
+    MgResult MG_CALL event_copy_info_to(MgEvent *s, MgEvent *d)
+    {
+        return event_copy_replace(s, d, false);
+    }
 
-    const MgHostApi g_host_api = {
-        sizeof(MgHostApi), MG_ABI_VERSION, object_add_ref, object_release, report_error,
-        context_get_document, context_get_main_window_handle, context_get_current_tick, context_update,
-        document_get_chart, document_get_undo_buffer, undo_begin_recording, undo_commit_recording,
-        undo_discard_recording, undo_undo, undo_redo, undo_can_undo, undo_can_redo, undo_is_recording,
-        chart_create_note, chart_get_notes_count, chart_get_note, chart_append_note, chart_delete_note,
-        chart_offset_notes, note_get_id, note_get_info, note_set_info, note_get_children_count,
-        note_get_child, note_get_parent, note_append_child, note_delete_child, note_clone,
-        note_replace_with, note_copy_info_to, note_get_base_note, note_offset_child, note_flip_h,
-        chart_create_event, chart_append_event, chart_delete_event, chart_find_event_timeline_speed,
-        chart_find_event_note_speed_modifier, chart_find_event_bpm, chart_find_event_beat_change,
-        event_get_kind, event_get_id, event_timeline_speed_get_info, event_timeline_speed_set_info,
-        event_note_speed_modifier_get_info, event_note_speed_modifier_set_info, event_bpm_get_info,
-        event_bpm_set_info, event_beat_change_get_info, event_beat_change_set_info,
-        event_replace_with, event_copy_info_to};
+    const MgHostApi g_host_api = {sizeof(MgHostApi),
+                                  MG_ABI_VERSION,
+                                  object_add_ref,
+                                  object_release,
+                                  report_error,
+                                  context_get_document,
+                                  context_get_main_window_handle,
+                                  context_get_current_tick,
+                                  context_update,
+                                  document_get_chart,
+                                  document_get_undo_buffer,
+                                  undo_begin_recording,
+                                  undo_commit_recording,
+                                  undo_discard_recording,
+                                  undo_undo,
+                                  undo_redo,
+                                  undo_can_undo,
+                                  undo_can_redo,
+                                  undo_is_recording,
+                                  chart_create_note,
+                                  chart_get_notes_count,
+                                  chart_get_note,
+                                  chart_append_note,
+                                  chart_delete_note,
+                                  chart_offset_notes,
+                                  note_get_id,
+                                  note_get_info,
+                                  note_set_info,
+                                  note_get_children_count,
+                                  note_get_child,
+                                  note_get_parent,
+                                  note_append_child,
+                                  note_delete_child,
+                                  note_clone,
+                                  note_replace_with,
+                                  note_copy_info_to,
+                                  note_get_base_note,
+                                  note_offset_child,
+                                  note_flip_h,
+                                  chart_create_event,
+                                  chart_append_event,
+                                  chart_delete_event,
+                                  chart_find_event_timeline_speed,
+                                  chart_find_event_note_speed_modifier,
+                                  chart_find_event_bpm,
+                                  chart_find_event_beat_change,
+                                  event_get_kind,
+                                  event_get_id,
+                                  event_timeline_speed_get_info,
+                                  event_timeline_speed_set_info,
+                                  event_note_speed_modifier_get_info,
+                                  event_note_speed_modifier_set_info,
+                                  event_bpm_get_info,
+                                  event_bpm_set_info,
+                                  event_beat_change_get_info,
+                                  event_beat_change_set_info,
+                                  event_replace_with,
+                                  event_copy_info_to};
 
     std::once_flag g_init_once;
     MgPluginApi g_plugin_api{};
@@ -712,21 +1159,29 @@ namespace
 
     void initialize_plugin() noexcept
     {
-        std::call_once(g_init_once, []
-                       {
-        g_plugin_api = {};
-        g_plugin_api.struct_size = sizeof(g_plugin_api);
-        g_plugin_api.abi_version = MG_ABI_VERSION;
-        try { g_init_result = mg_plugin_init(MG_ABI_VERSION, &g_host_api, &g_plugin_api); }
-        catch (...) { g_init_result = MG_ERR_PANIC; }
-        constexpr size_t required = offsetof(MgPluginApi, invoke) + sizeof(g_plugin_api.invoke);
-        if (g_init_result == MG_OK &&
-            (g_plugin_api.struct_size < required || g_plugin_api.abi_version != MG_ABI_VERSION ||
-             !g_plugin_api.get_plugin_info || !g_plugin_api.create_command ||
-             !g_plugin_api.destroy_command || !g_plugin_api.get_command_name || !g_plugin_api.invoke)) {
-            g_init_result = MG_ERR_PLUGIN_INIT_FAILED;
-        }
-        if (g_init_result != MG_OK) show_result(nullptr, L"mg_plugin_init", g_init_result); });
+        std::call_once(g_init_once, [] {
+            g_plugin_api = {};
+            g_plugin_api.struct_size = sizeof(g_plugin_api);
+            g_plugin_api.abi_version = MG_ABI_VERSION;
+            try
+            {
+                g_init_result = mg_plugin_init(MG_ABI_VERSION, &g_host_api, &g_plugin_api);
+            }
+            catch (...)
+            {
+                g_init_result = MG_ERR_PANIC;
+            }
+            constexpr size_t required = offsetof(MgPluginApi, invoke) + sizeof(g_plugin_api.invoke);
+            if (g_init_result == MG_OK &&
+                (g_plugin_api.struct_size < required || g_plugin_api.abi_version != MG_ABI_VERSION ||
+                 !g_plugin_api.get_plugin_info || !g_plugin_api.create_command || !g_plugin_api.destroy_command ||
+                 !g_plugin_api.get_command_name || !g_plugin_api.invoke))
+            {
+                g_init_result = MG_ERR_PLUGIN_INIT_FAILED;
+            }
+            if (g_init_result != MG_OK)
+                show_result(nullptr, L"mg_plugin_init", g_init_result);
+        });
     }
 
     MgResult get_utf8_string(void *command, bool command_name, std::wstring &out)
@@ -746,8 +1201,7 @@ namespace
         r = g_plugin_api.get_command_name(g_plugin_api.plugin_data, command, buffer.data(), required, &second_required);
         if (r != MG_OK)
             return r;
-        if (second_required != required || buffer.back() != '\0' ||
-            std::memchr(buffer.data(), '\0', required - 1))
+        if (second_required != required || buffer.back() != '\0' || std::memchr(buffer.data(), '\0', required - 1))
             return MG_ERR_INVALID_ARGUMENT;
         return utf8_to_wide(buffer.data(), required - 1, out) ? MG_OK : MG_ERR_INVALID_ARGUMENT;
     }
@@ -759,7 +1213,8 @@ namespace
         MgResult r = g_plugin_api.get_plugin_info(g_plugin_api.plugin_data, &q);
         if (r != MG_OK)
             return r;
-        if (!nr || !dr || !vr || nr > static_cast<uint32_t>(INT_MAX) || dr > static_cast<uint32_t>(INT_MAX) || vr > static_cast<uint32_t>(INT_MAX))
+        if (!nr || !dr || !vr || nr > static_cast<uint32_t>(INT_MAX) || dr > static_cast<uint32_t>(INT_MAX) ||
+            vr > static_cast<uint32_t>(INT_MAX))
             return MG_ERR_INVALID_ARGUMENT;
         std::vector<char> n(nr), d(dr), v(vr);
         uint32_t nr2 = 0, dr2 = 0, vr2 = 0;
@@ -767,20 +1222,27 @@ namespace
         r = g_plugin_api.get_plugin_info(g_plugin_api.plugin_data, &b);
         if (r != MG_OK)
             return r;
-        auto valid = [](const std::vector<char> &x, uint32_t a, uint32_t z)
-        { return a == z && x.back() == '\0' && !std::memchr(x.data(), '\0', z - 1); };
+        auto valid = [](const std::vector<char> &x, uint32_t a, uint32_t z) {
+            return a == z && x.back() == '\0' && !std::memchr(x.data(), '\0', z - 1);
+        };
         if (!valid(n, nr2, nr) || !valid(d, dr2, dr) || !valid(v, vr2, vr))
             return MG_ERR_INVALID_ARGUMENT;
-        if (!utf8_to_wide(n.data(), nr - 1, name) || !utf8_to_wide(d.data(), dr - 1, desc) || !utf8_to_wide(v.data(), vr - 1, developer))
+        if (!utf8_to_wide(n.data(), nr - 1, name) || !utf8_to_wide(d.data(), dr - 1, desc) ||
+            !utf8_to_wide(v.data(), vr - 1, developer))
             return MG_ERR_INVALID_ARGUMENT;
         return MG_OK;
     }
 
     class Command final : public IMargretePluginCommand
     {
-    public:
-        explicit Command(void *command) : command_(command) {}
-        MpInteger addRef() override { return ++refs_; }
+      public:
+        explicit Command(void *command) : command_(command)
+        {
+        }
+        MpInteger addRef() override
+        {
+            return ++refs_;
+        }
         MpInteger release() override
         {
             const MpInteger n = --refs_;
@@ -844,7 +1306,10 @@ namespace
             struct Reset
             {
                 std::atomic<bool> &v;
-                ~Reset() { v = false; }
+                ~Reset()
+                {
+                    v = false;
+                }
             } reset{invoking_};
             if (poisoned_)
             {
@@ -908,7 +1373,7 @@ namespace
             return result == MG_OK ? MP_TRUE : MP_FALSE;
         }
 
-    private:
+      private:
         ~Command()
         {
             try
@@ -995,8 +1460,10 @@ extern "C" __declspec(dllexport) MpBoolean __stdcall MargretePluginCommandCreate
 }
 
 static_assert(MP_SDK_VERSION == 2, "unexpected Margrete SDK version");
-static_assert(MP_NOTETYPE_UNKNOWN == MG_NOTE_TYPE_UNKNOWN && MP_NOTETYPE_CLICK == MG_NOTE_TYPE_CLICK && MP_NOTETYPE_LAST == 13);
-static_assert(MP_NOTELONGATTR_NONE == MG_NOTE_LONG_ATTR_NONE && MP_NOTELONGATTR_END_NOACT == MG_NOTE_LONG_ATTR_END_NOACT);
+static_assert(MP_NOTETYPE_UNKNOWN == MG_NOTE_TYPE_UNKNOWN && MP_NOTETYPE_CLICK == MG_NOTE_TYPE_CLICK &&
+              MP_NOTETYPE_LAST == 13);
+static_assert(MP_NOTELONGATTR_NONE == MG_NOTE_LONG_ATTR_NONE &&
+              MP_NOTELONGATTR_END_NOACT == MG_NOTE_LONG_ATTR_END_NOACT);
 static_assert(MP_NOTEDIR_NONE == MG_NOTE_DIRECTION_NONE && MP_NOTEDIR_OUTIN == MG_NOTE_DIRECTION_OUT_IN);
 static_assert(MP_NOTEEXATTR_NONE == MG_NOTE_EX_ATTR_NONE && MP_NOTEEXATTR_EXJDG == MG_NOTE_EX_ATTR_EXJDG);
 static_assert(MP_OPTIONVALUE_AIRCRUSH_TRACELIKE == MG_OPTION_AIRCRUSH_TRACE_LIKE);

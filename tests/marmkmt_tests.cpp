@@ -1,5 +1,5 @@
-#include "marmkmt.h"
 #include "MargretePlugin.h"
+#include "marmkmt.h"
 
 #include <atomic>
 #ifdef NDEBUG
@@ -18,8 +18,7 @@ extern "C" MpBoolean __stdcall MargretePluginCommandCreate(IMargretePluginComman
 namespace
 {
 
-    template <class T>
-    MpBoolean qi(T *self, const MpGuid &, void **out)
+    template <class T> MpBoolean qi(T *self, const MpGuid &, void **out)
     {
         if (!out)
             return MP_FALSE;
@@ -34,9 +33,18 @@ namespace
         bool recording{};
         bool undoable{};
         bool redoable{};
-        MpInteger addRef() override { return ++refs; }
-        MpInteger release() override { return --refs; }
-        MpBoolean queryInterface(const MpGuid &id, void **out) override { return qi(this, id, out); }
+        MpInteger addRef() override
+        {
+            return ++refs;
+        }
+        MpInteger release() override
+        {
+            return --refs;
+        }
+        MpBoolean queryInterface(const MpGuid &id, void **out) override
+        {
+            return qi(this, id, out);
+        }
         MpBoolean beginRecording() override
         {
             if (recording)
@@ -75,9 +83,18 @@ namespace
             undoable = true;
             return MP_TRUE;
         }
-        MpBoolean canUndo() const override { return undoable ? MP_TRUE : MP_FALSE; }
-        MpBoolean canRedo() const override { return redoable ? MP_TRUE : MP_FALSE; }
-        MpBoolean isRecording() const override { return recording ? MP_TRUE : MP_FALSE; }
+        MpBoolean canUndo() const override
+        {
+            return undoable ? MP_TRUE : MP_FALSE;
+        }
+        MpBoolean canRedo() const override
+        {
+            return redoable ? MP_TRUE : MP_FALSE;
+        }
+        MpBoolean isRecording() const override
+        {
+            return recording ? MP_TRUE : MP_FALSE;
+        }
     };
 
     struct FakeNote final : IMargretePluginNote
@@ -87,13 +104,34 @@ namespace
         MP_NOTEINFO info{};
         FakeNote *parent{};
         std::vector<FakeNote *> children;
-        MpInteger addRef() override { return ++refs; }
-        MpInteger release() override { return --refs; }
-        MpBoolean queryInterface(const MpGuid &i, void **o) override { return qi(this, i, o); }
-        MpInteger getId() const override { return id; }
-        void getInfo(MP_NOTEINFO *out) const override { *out = info; }
-        void setInfo(const MP_NOTEINFO *in) override { info = *in; }
-        MpInteger getChildrenCount() const override { return static_cast<MpInteger>(children.size()); }
+        MpInteger addRef() override
+        {
+            return ++refs;
+        }
+        MpInteger release() override
+        {
+            return --refs;
+        }
+        MpBoolean queryInterface(const MpGuid &i, void **o) override
+        {
+            return qi(this, i, o);
+        }
+        MpInteger getId() const override
+        {
+            return id;
+        }
+        void getInfo(MP_NOTEINFO *out) const override
+        {
+            *out = info;
+        }
+        void setInfo(const MP_NOTEINFO *in) override
+        {
+            info = *in;
+        }
+        MpInteger getChildrenCount() const override
+        {
+            return static_cast<MpInteger>(children.size());
+        }
         MpBoolean getChild(MpInteger i, IMargretePluginNote **out) const override
         {
             if (!out || i < 0 || static_cast<size_t>(i) >= children.size())
@@ -136,8 +174,14 @@ namespace
             *out = n;
             return MP_TRUE;
         }
-        void replaceWith(const IMargretePluginNote *s, MpBoolean) override { info = static_cast<const FakeNote *>(s)->info; }
-        void copyInfoTo(IMargretePluginNote *d) const override { static_cast<FakeNote *>(d)->info = info; }
+        void replaceWith(const IMargretePluginNote *s, MpBoolean) override
+        {
+            info = static_cast<const FakeNote *>(s)->info;
+        }
+        void copyInfoTo(IMargretePluginNote *d) const override
+        {
+            static_cast<FakeNote *>(d)->info = info;
+        }
         MpBoolean getBaseNote(IMargretePluginNote **out) const override
         {
             if (!out || !parent)
@@ -160,20 +204,43 @@ namespace
         }
     };
 
-    template <class Interface, class Info>
-    struct EventCommon : Interface
+    template <class Interface, class Info> struct EventCommon : Interface
     {
         MpInteger refs{1};
         MpInteger id{77};
         Info info{};
-        MpInteger addRef() override { return ++refs; }
-        MpInteger release() override { return --refs; }
-        MpBoolean queryInterface(const MpGuid &i, void **o) override { return qi(this, i, o); }
-        MpInteger getId() const override { return id; }
-        void getInfo(Info *out) const override { *out = info; }
-        void setInfo(const Info *in) override { info = *in; }
-        void replaceWith(const Interface *s) override { info = static_cast<const EventCommon *>(s)->info; }
-        void copyInfoTo(Interface *d) const override { static_cast<EventCommon *>(d)->info = info; }
+        MpInteger addRef() override
+        {
+            return ++refs;
+        }
+        MpInteger release() override
+        {
+            return --refs;
+        }
+        MpBoolean queryInterface(const MpGuid &i, void **o) override
+        {
+            return qi(this, i, o);
+        }
+        MpInteger getId() const override
+        {
+            return id;
+        }
+        void getInfo(Info *out) const override
+        {
+            *out = info;
+        }
+        void setInfo(const Info *in) override
+        {
+            info = *in;
+        }
+        void replaceWith(const Interface *s) override
+        {
+            info = static_cast<const EventCommon *>(s)->info;
+        }
+        void copyInfoTo(Interface *d) const override
+        {
+            static_cast<EventCommon *>(d)->info = info;
+        }
     };
     using FakeTls = EventCommon<IMargretePluginEventTimelineSpeed, MP_EVENT_TLSINFO>;
     using FakeNsm = EventCommon<IMargretePluginEventNoteSpeedModifier, MP_EVENT_NSMINFO>;
@@ -185,9 +252,18 @@ namespace
         MpInteger refs{1};
         std::vector<FakeNote *> notes;
         std::vector<IMargretePluginEvent *> events;
-        MpInteger addRef() override { return ++refs; }
-        MpInteger release() override { return --refs; }
-        MpBoolean queryInterface(const MpGuid &i, void **o) override { return qi(this, i, o); }
+        MpInteger addRef() override
+        {
+            return ++refs;
+        }
+        MpInteger release() override
+        {
+            return --refs;
+        }
+        MpBoolean queryInterface(const MpGuid &i, void **o) override
+        {
+            return qi(this, i, o);
+        }
         MpBoolean createNote(IMargretePluginNote **out) const override
         {
             if (!out)
@@ -195,7 +271,10 @@ namespace
             *out = new FakeNote();
             return MP_TRUE;
         }
-        MpInteger getNotesCount() const override { return static_cast<MpInteger>(notes.size()); }
+        MpInteger getNotesCount() const override
+        {
+            return static_cast<MpInteger>(notes.size());
+        }
         MpBoolean getNote(MpInteger i, IMargretePluginNote **out) override
         {
             if (!out || i < 0 || static_cast<size_t>(i) >= notes.size())
@@ -318,9 +397,18 @@ namespace
         MpInteger refs{1};
         FakeChart chart;
         FakeUndo undo;
-        MpInteger addRef() override { return ++refs; }
-        MpInteger release() override { return --refs; }
-        MpBoolean queryInterface(const MpGuid &i, void **o) override { return qi(this, i, o); }
+        MpInteger addRef() override
+        {
+            return ++refs;
+        }
+        MpInteger release() override
+        {
+            return --refs;
+        }
+        MpBoolean queryInterface(const MpGuid &i, void **o) override
+        {
+            return qi(this, i, o);
+        }
         MpBoolean getChart(IMargretePluginChart **out) override
         {
             if (!out)
@@ -343,9 +431,18 @@ namespace
         MpInteger refs{1};
         FakeDocument document;
         int updates{};
-        MpInteger addRef() override { return ++refs; }
-        MpInteger release() override { return --refs; }
-        MpBoolean queryInterface(const MpGuid &i, void **o) override { return qi(this, i, o); }
+        MpInteger addRef() override
+        {
+            return ++refs;
+        }
+        MpInteger release() override
+        {
+            return --refs;
+        }
+        MpBoolean queryInterface(const MpGuid &i, void **o) override
+        {
+            return qi(this, i, o);
+        }
         MpBoolean getDocument(IMargretePluginDocument **out) override
         {
             if (!out)
@@ -354,9 +451,18 @@ namespace
             *out = &document;
             return MP_TRUE;
         }
-        void *getMainWindowHandle() override { return nullptr; }
-        MpInteger getCurrentTick() const override { return 960; }
-        void update() const override { const_cast<FakeContext *>(this)->updates++; }
+        void *getMainWindowHandle() override
+        {
+            return nullptr;
+        }
+        MpInteger getCurrentTick() const override
+        {
+            return 960;
+        }
+        void update() const override
+        {
+            const_cast<FakeContext *>(this)->updates++;
+        }
     };
 
     const MgHostApi *host_api{};
@@ -386,7 +492,8 @@ namespace
         MgResult r = copy_string("marmkmt test", b->name, b->name_capacity, b->name_required);
         if (r != MG_OK)
             return r;
-        r = copy_string("UTF-8: \xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E", b->description, b->description_capacity, b->description_required);
+        r = copy_string("UTF-8: \xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E", b->description, b->description_capacity,
+                        b->description_required);
         if (r != MG_OK)
             return r;
         return copy_string("tester", b->developer, b->developer_capacity, b->developer_required);
@@ -403,7 +510,10 @@ namespace
         delete static_cast<int *>(c);
         destroy_calls++;
     }
-    MgResult MG_CALL command_name(void *, void *, char *b, uint32_t c, uint32_t *r) { return copy_string("test command", b, c, r); }
+    MgResult MG_CALL command_name(void *, void *, char *b, uint32_t c, uint32_t *r)
+    {
+        return copy_string("test command", b, c, r);
+    }
 
     MgResult MG_CALL invoke(void *, void *, MgContext *ctx)
     {
@@ -431,8 +541,10 @@ namespace
         MgInt id{};
         assert(host_api->note_get_id(note, &id) == MG_OK && id == 42);
         MgResult thread_result = MG_OK;
-        std::thread worker([&]
-                           {MgInt count{};thread_result=host_api->chart_get_notes_count(chart,&count); });
+        std::thread worker([&] {
+            MgInt count{};
+            thread_result = host_api->chart_get_notes_count(chart, &count);
+        });
         worker.join();
         assert(thread_result == MG_ERR_WRONG_THREAD);
         assert(host_api->object_release(note) == MG_OK);
