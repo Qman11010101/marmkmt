@@ -22,6 +22,11 @@ target_compile_definitions(marmkmt PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN 
 target_compile_options(marmkmt PRIVATE /W4 /permissive- /EHsc /utf-8)
 set_target_properties(marmkmt PROPERTIES OUTPUT_NAME marmkmt)
 
+option(MARMKMT_BUILD_EXAMPLES "Build marmkmt examples" ON)
+if(MARMKMT_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
   add_executable(marmkmt_tests tests/marmkmt_tests.cpp)

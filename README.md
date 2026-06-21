@@ -4,6 +4,8 @@
 
 [ドキュメント](./docs/README.md)
 
+[C 言語プラグインのサンプル](./examples/README.md)
+
 `marmkmt` は、Margrete Plugin SDK v2 の C++ ABI を、[`include/marmkmt.h`](include/marmkmt.h)
 で定義された安定した C ABI に変換するライブラリです。ビルド成果物は単一の x64 Windows スタティックライブラリであり、
 ブリッジ DLL は生成されません。

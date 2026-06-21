@@ -4,6 +4,8 @@
 
 [Documentation (Japanese)](./docs/README.md)
 
+[C plugin example](./examples/README.md)
+
 `marmkmt` is a library that converts the Margrete Plugin SDK v2 C++ ABI into the stable C ABI
 defined by [`include/marmkmt.h`](include/marmkmt.h). The build artifact is a single x64
 Windows static library; no bridge DLL is generated.
