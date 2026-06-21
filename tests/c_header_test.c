@@ -26,63 +26,64 @@ ABI_ASSERT(beat_change_alignment, __alignof(MgEventBeatChangeInfo) == 4);
 
 #define OFF(type, field) offsetof(type, field)
 static const size_t note_offsets[] = {
-    OFF(MgNoteInfo,type), OFF(MgNoteInfo,long_attr), OFF(MgNoteInfo,direction),
-    OFF(MgNoteInfo,ex_attr), OFF(MgNoteInfo,variation_id), OFF(MgNoteInfo,x),
-    OFF(MgNoteInfo,width), OFF(MgNoteInfo,height), OFF(MgNoteInfo,tick),
-    OFF(MgNoteInfo,timeline_id), OFF(MgNoteInfo,option_value)
-};
+    OFF(MgNoteInfo, type), OFF(MgNoteInfo, long_attr), OFF(MgNoteInfo, direction),
+    OFF(MgNoteInfo, ex_attr), OFF(MgNoteInfo, variation_id), OFF(MgNoteInfo, x),
+    OFF(MgNoteInfo, width), OFF(MgNoteInfo, height), OFF(MgNoteInfo, tick),
+    OFF(MgNoteInfo, timeline_id), OFF(MgNoteInfo, option_value)};
 static const size_t host_offsets[] = {
-    OFF(MgHostApi,object_add_ref), OFF(MgHostApi,object_release), OFF(MgHostApi,report_error),
-    OFF(MgHostApi,context_get_document), OFF(MgHostApi,context_get_main_window_handle),
-    OFF(MgHostApi,context_get_current_tick), OFF(MgHostApi,context_update),
-    OFF(MgHostApi,document_get_chart), OFF(MgHostApi,document_get_undo_buffer),
-    OFF(MgHostApi,undo_begin_recording), OFF(MgHostApi,undo_commit_recording),
-    OFF(MgHostApi,undo_discard_recording), OFF(MgHostApi,undo_undo), OFF(MgHostApi,undo_redo),
-    OFF(MgHostApi,undo_can_undo), OFF(MgHostApi,undo_can_redo), OFF(MgHostApi,undo_is_recording),
-    OFF(MgHostApi,chart_create_note), OFF(MgHostApi,chart_get_notes_count),
-    OFF(MgHostApi,chart_get_note), OFF(MgHostApi,chart_append_note),
-    OFF(MgHostApi,chart_delete_note), OFF(MgHostApi,chart_offset_notes),
-    OFF(MgHostApi,note_get_id), OFF(MgHostApi,note_get_info), OFF(MgHostApi,note_set_info),
-    OFF(MgHostApi,note_get_children_count), OFF(MgHostApi,note_get_child),
-    OFF(MgHostApi,note_get_parent), OFF(MgHostApi,note_append_child),
-    OFF(MgHostApi,note_delete_child), OFF(MgHostApi,note_clone),
-    OFF(MgHostApi,note_replace_with), OFF(MgHostApi,note_copy_info_to),
-    OFF(MgHostApi,note_get_base_note), OFF(MgHostApi,note_offset_child), OFF(MgHostApi,note_flip_h),
-    OFF(MgHostApi,chart_create_event), OFF(MgHostApi,chart_append_event),
-    OFF(MgHostApi,chart_delete_event), OFF(MgHostApi,chart_find_event_timeline_speed),
-    OFF(MgHostApi,chart_find_event_note_speed_modifier), OFF(MgHostApi,chart_find_event_bpm),
-    OFF(MgHostApi,chart_find_event_beat_change), OFF(MgHostApi,event_get_kind),
-    OFF(MgHostApi,event_get_id), OFF(MgHostApi,event_timeline_speed_get_info),
-    OFF(MgHostApi,event_timeline_speed_set_info), OFF(MgHostApi,event_note_speed_modifier_get_info),
-    OFF(MgHostApi,event_note_speed_modifier_set_info), OFF(MgHostApi,event_bpm_get_info),
-    OFF(MgHostApi,event_bpm_set_info), OFF(MgHostApi,event_beat_change_get_info),
-    OFF(MgHostApi,event_beat_change_set_info), OFF(MgHostApi,event_replace_with),
-    OFF(MgHostApi,event_copy_info_to)
-};
+    OFF(MgHostApi, object_add_ref), OFF(MgHostApi, object_release), OFF(MgHostApi, report_error),
+    OFF(MgHostApi, context_get_document), OFF(MgHostApi, context_get_main_window_handle),
+    OFF(MgHostApi, context_get_current_tick), OFF(MgHostApi, context_update),
+    OFF(MgHostApi, document_get_chart), OFF(MgHostApi, document_get_undo_buffer),
+    OFF(MgHostApi, undo_begin_recording), OFF(MgHostApi, undo_commit_recording),
+    OFF(MgHostApi, undo_discard_recording), OFF(MgHostApi, undo_undo), OFF(MgHostApi, undo_redo),
+    OFF(MgHostApi, undo_can_undo), OFF(MgHostApi, undo_can_redo), OFF(MgHostApi, undo_is_recording),
+    OFF(MgHostApi, chart_create_note), OFF(MgHostApi, chart_get_notes_count),
+    OFF(MgHostApi, chart_get_note), OFF(MgHostApi, chart_append_note),
+    OFF(MgHostApi, chart_delete_note), OFF(MgHostApi, chart_offset_notes),
+    OFF(MgHostApi, note_get_id), OFF(MgHostApi, note_get_info), OFF(MgHostApi, note_set_info),
+    OFF(MgHostApi, note_get_children_count), OFF(MgHostApi, note_get_child),
+    OFF(MgHostApi, note_get_parent), OFF(MgHostApi, note_append_child),
+    OFF(MgHostApi, note_delete_child), OFF(MgHostApi, note_clone),
+    OFF(MgHostApi, note_replace_with), OFF(MgHostApi, note_copy_info_to),
+    OFF(MgHostApi, note_get_base_note), OFF(MgHostApi, note_offset_child), OFF(MgHostApi, note_flip_h),
+    OFF(MgHostApi, chart_create_event), OFF(MgHostApi, chart_append_event),
+    OFF(MgHostApi, chart_delete_event), OFF(MgHostApi, chart_find_event_timeline_speed),
+    OFF(MgHostApi, chart_find_event_note_speed_modifier), OFF(MgHostApi, chart_find_event_bpm),
+    OFF(MgHostApi, chart_find_event_beat_change), OFF(MgHostApi, event_get_kind),
+    OFF(MgHostApi, event_get_id), OFF(MgHostApi, event_timeline_speed_get_info),
+    OFF(MgHostApi, event_timeline_speed_set_info), OFF(MgHostApi, event_note_speed_modifier_get_info),
+    OFF(MgHostApi, event_note_speed_modifier_set_info), OFF(MgHostApi, event_bpm_get_info),
+    OFF(MgHostApi, event_bpm_set_info), OFF(MgHostApi, event_beat_change_get_info),
+    OFF(MgHostApi, event_beat_change_set_info), OFF(MgHostApi, event_replace_with),
+    OFF(MgHostApi, event_copy_info_to)};
 static const size_t plugin_info_offsets[] = {
-    OFF(MgPluginInfoBuffers,struct_size), OFF(MgPluginInfoBuffers,name),
-    OFF(MgPluginInfoBuffers,name_capacity), OFF(MgPluginInfoBuffers,name_required),
-    OFF(MgPluginInfoBuffers,description), OFF(MgPluginInfoBuffers,description_capacity),
-    OFF(MgPluginInfoBuffers,description_required), OFF(MgPluginInfoBuffers,developer),
-    OFF(MgPluginInfoBuffers,developer_capacity), OFF(MgPluginInfoBuffers,developer_required)
-};
-static const size_t plugin_info_expected[] = {0,8,16,24,32,40,48,56,64,72};
+    OFF(MgPluginInfoBuffers, struct_size), OFF(MgPluginInfoBuffers, name),
+    OFF(MgPluginInfoBuffers, name_capacity), OFF(MgPluginInfoBuffers, name_required),
+    OFF(MgPluginInfoBuffers, description), OFF(MgPluginInfoBuffers, description_capacity),
+    OFF(MgPluginInfoBuffers, description_required), OFF(MgPluginInfoBuffers, developer),
+    OFF(MgPluginInfoBuffers, developer_capacity), OFF(MgPluginInfoBuffers, developer_required)};
+static const size_t plugin_info_expected[] = {0, 8, 16, 24, 32, 40, 48, 56, 64, 72};
 static const size_t plugin_api_offsets[] = {
-    OFF(MgPluginApi,struct_size), OFF(MgPluginApi,abi_version), OFF(MgPluginApi,plugin_data),
-    OFF(MgPluginApi,get_plugin_info), OFF(MgPluginApi,create_command),
-    OFF(MgPluginApi,destroy_command), OFF(MgPluginApi,get_command_name), OFF(MgPluginApi,invoke)
-};
-static const size_t plugin_api_expected[] = {0,4,8,16,24,32,40,48};
+    OFF(MgPluginApi, struct_size), OFF(MgPluginApi, abi_version), OFF(MgPluginApi, plugin_data),
+    OFF(MgPluginApi, get_plugin_info), OFF(MgPluginApi, create_command),
+    OFF(MgPluginApi, destroy_command), OFF(MgPluginApi, get_command_name), OFF(MgPluginApi, invoke)};
+static const size_t plugin_api_expected[] = {0, 4, 8, 16, 24, 32, 40, 48};
 
-int main(void) {
+int main(void)
+{
     size_t i;
-    for (i = 0; i < sizeof(note_offsets)/sizeof(note_offsets[0]); ++i)
-        if (note_offsets[i] != i * 4) return 2;
-    for (i = 0; i < sizeof(host_offsets)/sizeof(host_offsets[0]); ++i)
-        if (host_offsets[i] != 8 + i * sizeof(void*)) return 3;
-    for (i = 0; i < sizeof(plugin_info_offsets)/sizeof(plugin_info_offsets[0]); ++i)
-        if (plugin_info_offsets[i] != plugin_info_expected[i]) return 4;
-    for (i = 0; i < sizeof(plugin_api_offsets)/sizeof(plugin_api_offsets[0]); ++i)
-        if (plugin_api_offsets[i] != plugin_api_expected[i]) return 5;
+    for (i = 0; i < sizeof(note_offsets) / sizeof(note_offsets[0]); ++i)
+        if (note_offsets[i] != i * 4)
+            return 2;
+    for (i = 0; i < sizeof(host_offsets) / sizeof(host_offsets[0]); ++i)
+        if (host_offsets[i] != 8 + i * sizeof(void *))
+            return 3;
+    for (i = 0; i < sizeof(plugin_info_offsets) / sizeof(plugin_info_offsets[0]); ++i)
+        if (plugin_info_offsets[i] != plugin_info_expected[i])
+            return 4;
+    for (i = 0; i < sizeof(plugin_api_offsets) / sizeof(plugin_api_offsets[0]); ++i)
+        if (plugin_api_offsets[i] != plugin_api_expected[i])
+            return 5;
     return 0;
 }
