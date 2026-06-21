@@ -1,4 +1,14 @@
 cmake_minimum_required(VERSION 3.24)
+
+# Margrete plugins are distributed as standalone DLLs. Match the official
+# MargretePluginSample and statically link the MSVC runtime so loading a plugin
+# does not depend on a separately installed VC++ Redistributable. Callers can
+# still override this choice with -DCMAKE_MSVC_RUNTIME_LIBRARY=...
+if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY
+      "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 project(marmkmt VERSION 0.1.0 LANGUAGES C CXX)
 
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
